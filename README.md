@@ -1,223 +1,232 @@
 # Smart Campus Service Management System (SCSMS)
 
-A full-stack enterprise campus service management web application built from scratch with **Spring Boot** (REST API & backend service) and **Vanilla JavaScript / Modern CSS / HTML5** (responsive client frontend), backed by **MySQL**.
+A full-stack enterprise campus facility and service management application built with **React (Vite, JavaScript, CSS)** and **Spring Boot 3.3.4 (Java 17)**, featuring **PostgreSQL** persistence, **Spring Security 6** role-based authentication with credentialed CORS & CSRF protection, and **Render** cloud deployment readiness.
 
 ---
 
 ## 🌟 Key Features
 
-1. **Service Request Dashboard**:
-   - Live metrics: Total requests, Pending, In Progress, and Resolved counts.
-   - Dynamic campus category breakdown (Electrical, Plumbing, Wi-Fi, Classroom Maintenance, Laboratory Equipment, Other).
+1. **Modern React Frontend (Vite, ES6, Modular Components)**:
+   - **Component Architecture**: Built inside `frontend/` using Vite, React 18, and modular reusable components (`Header`, `Sidebar`, `Toast`, `AuthModal`, `StatusBadge`, `PriorityBadge`, `RequestDetailsModal`, `StatusUpdateModal`, `DeleteConfirmModal`, `SuccessModal`).
+   - **State & Auth Management**: Unified `AuthContext` managing authentication state, session initialization, login, registration, and logout.
+   - **Configurable API Layer**: `services/api.js` connects via `VITE_API_BASE_URL` with credentials (`include`), CSRF token extraction (`X-XSRF-TOKEN`), and error handling.
+   - **Responsive Design**: Professional layout featuring collapsible mobile navigation drawer, live system clock, statistical cards, data tables, and modal dialogs.
+
+2. **Enterprise Authentication & Session Security**:
+   - **Student Self-Registration**: Public registration automatically assigns `ROLE_STUDENT` with BCrypt password hashing ($2a$). Validates unique email and student ID.
+   - **Secure Administrator Provisioning**: The first administrator account (`ROLE_ADMIN`) is initialized safely via environment variables (`APP_ADMIN_PASSWORD` / `APP_ADMIN_EMAIL`) or a secure one-time generated console token on startup without hardcoding passwords. Public registration never allows creating admin accounts.
+   - **Session-Based Authentication & CSRF Protection**: Spring Security session management with `CookieCsrfTokenRepository` (`XSRF-TOKEN` cookie and `X-XSRF-TOKEN` request header).
+   - **Credentialed Cross-Origin CORS**: Configured in `SecurityConfig` and `WebConfig` using `CorsConfigurationSource` with `allowCredentials(true)` and specific origin patterns, supporting separate frontend domains on Render without insecure wildcards.
+
+3. **Role-Based Access Control (RBAC)**:
+   - **Students**: Can submit service requests, track their own requests by unique tracking ID, and view only their own submitted requests (backend enforcement prevents inspecting other students' tickets). Form auto-fills student details upon login.
+   - **Administrators**: Can inspect all campus tickets, update ticket statuses (`Pending`, `In Progress`, `Resolved`), append official technician/admin notes, and permanently delete tickets.
+   - **Role-Aware UI**: Automatically toggles navigation options, pre-fills student profile fields, displays active user badges, and provides secure session logout.
+
+4. **Facility & Service Request Management**:
+   - Unique, human-friendly tracking code generation (e.g. `REQ-20261012-4821`).
+   - Categorized by Electrical, Plumbing, Wi-Fi, Classroom Maintenance, Laboratory Equipment, and Other.
+   - Urgency priority selector (Low, Medium, High, Urgent).
+   - Real-time resolution stepper: `Submitted (Pending)` ➔ `In Progress` ➔ `Resolved`.
+
+5. **Live Dashboard & Metrics**:
+   - Real-time counters: Total requests, Pending review, In Progress, and Resolved.
+   - Interactive category distribution breakdown with percentage progress indicators.
    - Recent requests quick inspection table.
 
-2. **Service Request Submission**:
-   - Student submission form with client & server-side validation.
-   - Fields: Student Full Name, Student ID / Roll No, Department, Category, Location / Room, Priority (Low, Medium, High, Urgent), and Problem Description.
-   - Automatically generates a unique, human-friendly tracking code (e.g. `REQ-20261011-4821`).
-   - One-click copy and instant tracking shortcuts upon submission.
-
-3. **Request Tracking & Lifecycle Stepper**:
-   - Real-time status lookup using tracking code.
-   - Visual 3-node progress stepper: `Submitted (Pending)` ➔ `In Progress` ➔ `Resolved`.
-   - Comprehensive request details display including timestamps and administrator remarks.
-
-4. **Administrator Portal**:
-   - Manage campus tickets.
-   - Update request status (`Pending`, `In Progress`, `Resolved`) with technician remarks.
-   - Delete requests with safety confirmation modal.
-   - Filter by status and service category.
-
-5. **Modern Responsive UI**:
-   - Collapsible mobile navigation drawer.
-   - Interactive modal dialogues for viewing, updating, and confirming deletions.
-   - Live system clock and toast notification system.
-   - Single unified port: Frontend is served directly by the Spring Boot server (`http://localhost:8080`).
+6. **Cloud Deployment & PostgreSQL Architecture**:
+   - Migration from MySQL to PostgreSQL.
+   - Automatic `DATABASE_URL` parser converting Render's connection URI format (`postgres://...` / `postgresql://...`) into HikariCP JDBC connections.
+   - Dynamic port binding via `${PORT:8080}`.
+   - Built-in health check endpoints (`/actuator/health` and `/api/health`).
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Backend**: Java 17+, Spring Boot 3.3.4, Spring Web (REST API), Spring Data JPA (Hibernate), Spring Boot Validation (Hibernate Validator)
-- **Frontend**: HTML5, Modern CSS (Custom properties, Flexbox/Grid, Responsive), Vanilla JavaScript (Modular ES6 `api.js` & `app.js`)
-- **Database**: MySQL 8.0+ (with H2 in-memory profile for automated tests)
-- **Build Tool**: Apache Maven 3.9+
+| Layer | Technologies |
+|---|---|
+| **Frontend** | React 18, Vite 5, JavaScript (ES6+), Modern CSS (Variables, Grid/Flexbox) |
+| **Backend** | Java 17, Spring Boot 3.3.4, Spring Security 6, Spring Data JPA (Hibernate 6), Spring Boot Validation, Spring Boot Actuator |
+| **Database** | PostgreSQL 15+ (Production/Local), H2 in PostgreSQL compatibility mode (Automated Tests/Demo) |
+| **Security** | BCrypt Password Hashing, HTTP Sessions, Cookie-based CSRF protection (`CookieCsrfTokenRepository.withHttpOnlyFalse()`), Credentialed CORS |
+| **Build & Deploy**| Vite (`npm run build`), Apache Maven 3.9+ (`mvn clean package`), Render Blueprint (`render.yaml`) |
 
 ---
 
 ## 🏗️ System Architecture
 
-The project follows a clean **layered architecture** pattern with strict separation of concerns:
-
 ```
-┌────────────────────────────────────────────────────────┐
-│               Frontend (Client Browser)                │
-│  - index.html (Responsive Dashboard & Modals)          │
-│  - styles.css (Modern CSS, Variables, Grid/Flexbox)    │
-│  - api.js (Fetch wrapper for REST endpoints)           │
-│  - app.js (State management, reactive UI, validations) │
-└───────────────────────────▲────────────────────────────┘
-                            │ HTTP JSON / REST
-┌───────────────────────────▼────────────────────────────┐
-│                    Controller Layer                    │
-│  - ServiceRequestController (@RestController)          │
-│  - DashboardController (@RestController)               │
-│  - GlobalExceptionHandler (@RestControllerAdvice)      │
-└───────────────────────────▲────────────────────────────┘
-                            │ DTOs (Data Transfer Objects)
-┌───────────────────────────▼────────────────────────────┐
-│                     Service Layer                      │
-│  - ServiceRequestService (Interface)                   │
-│  - ServiceRequestServiceImpl (Business logic & IDs)    │
-└───────────────────────────▲────────────────────────────┘
-                            │ Entity Models
-┌───────────────────────────▼────────────────────────────┐
-│                   Repository Layer                     │
-│  - ServiceRequestRepository (Spring Data JPA)          │
-└───────────────────────────▲────────────────────────────┘
-                            │ JDBC / Hibernate ORM
-┌───────────────────────────▼────────────────────────────┐
-│                    Database Layer                      │
-│  - MySQL Database (`smart_campus_db`)                  │
-└────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│             React Frontend (Vite / Single-Page App)          │
+│  - App.jsx (Routing, Global Modals, Toast Container)         │
+│  - AuthContext.jsx (Session state, Login/Register/Logout)    │
+│  - views/ (Dashboard, SubmitRequest, Track, AllRequests, ...)│
+│  - components/ (Header, Sidebar, Modals, Badges, Toasts)     │
+│  - services/api.js (VITE_API_BASE_URL, CSRF, Credentials)    │
+└──────────────────────────────▲───────────────────────────────┘
+                               │ HTTPS / JSON (Credentials + CSRF)
+┌──────────────────────────────▼───────────────────────────────┐
+│              Spring Security 6 & REST Controller Layer       │
+│  - SecurityConfig (BCrypt, CsrfCookieFilter, CorsSource)     │
+│  - AuthController (/api/auth/register, /login, /me, /logout) │
+│  - ServiceRequestController (Student & Admin REST endpoints) │
+│  - DashboardController (/api/dashboard/stats, /api/health)   │
+│  - GlobalExceptionHandler (401, 403, 404, 400 Handler)       │
+└──────────────────────────────▲───────────────────────────────┘
+                               │ DTOs (Data Transfer Objects)
+┌──────────────────────────────▼───────────────────────────────┐
+│                    Business Service Layer                    │
+│  - AuthService & AuthServiceImpl                             │
+│  - ServiceRequestService & ServiceRequestServiceImpl         │
+│  - CustomUserDetailsService (Loads user by email)            │
+└──────────────────────────────▲───────────────────────────────┘
+                               │ JPA Entities (User, ServiceRequest)
+┌──────────────────────────────▼───────────────────────────────┐
+│               Repository & Persistence Layer                 │
+│  - UserRepository (Student/Admin credentials & queries)      │
+│  - ServiceRequestRepository (Student-scoped & admin queries) │
+│  - DatabaseConfig (HikariCP pool & DATABASE_URL parser)      │
+└──────────────────────────────▲───────────────────────────────┘
+                               │ PostgreSQL JDBC Driver (42.7.4)
+┌──────────────────────────────▼───────────────────────────────┐
+│                       PostgreSQL Database                    │
+│  - Render Managed PostgreSQL / Local PostgreSQL 15+          │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🗄️ MySQL Database Setup & Configuration
+## 📁 React Frontend Structure (`frontend/`)
 
-### 1. Start MySQL Server
-Ensure your local MySQL service is running (default port `3306`).
-
-### 2. Create the Database (Optional)
-The application connects with `createDatabaseIfNotExist=true`, but you can also manually create it using the MySQL client:
-```sql
-CREATE DATABASE IF NOT EXISTS smart_campus_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
-
-### 3. Configure Credentials in `application.properties`
-Open `src/main/resources/application.properties`:
-```properties
-# MySQL Connection URL
-spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/smart_campus_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
-
-# Set your MySQL username and password below:
-spring.datasource.username=${SPRING_DATASOURCE_USERNAME:root}
-spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:your_mysql_password}
-
-# Hibernate DDL Auto (creates and updates tables automatically)
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+frontend/
+├── index.html                 # HTML entry with Inter typography
+├── package.json               # Dependencies (React 18, Vite 5)
+├── vite.config.js             # Vite config with dev proxy to http://localhost:8080
+├── .env                       # Local environment defaults
+├── .env.production            # Production environment configuration
+└── src/
+    ├── main.jsx               # React DOM entry point mounting AuthProvider
+    ├── App.jsx                # Core layout, view switching, toasts, modal manager
+    ├── index.css              # Modern CSS theme and responsive rules
+    ├── context/
+    │   └── AuthContext.jsx    # Authentication context, session hook (useAuth)
+    ├── services/
+    │   └── api.js             # Reusable API service handling CSRF and credentials
+    ├── components/
+    │   ├── Header.jsx         # Header with live clock and user profile badge
+    │   ├── Sidebar.jsx        # Navigation sidebar with role-aware admin links
+    │   ├── StatusBadge.jsx    # Status and priority badges
+    │   ├── Toast.jsx          # Toast alert notifications
+    │   ├── AuthModal.jsx      # Modal with Sign In and Student Registration tabs
+    │   ├── RequestDetailsModal.jsx # Detailed ticket view modal
+    │   ├── StatusUpdateModal.jsx   # Admin status update modal
+    │   ├── DeleteConfirmModal.jsx  # Admin deletion confirmation modal
+    │   └── SuccessModal.jsx   # Post-submission modal with Copy/Track shortcuts
+    └── views/
+        ├── DashboardView.jsx  # Metrics cards, category breakdown, recent tickets
+        ├── SubmitRequestView.jsx # Ticket creation form with live counter
+        ├── TrackRequestView.jsx  # Search bar with 3-node resolution stepper
+        ├── AllRequestsView.jsx   # Filter tabs, category dropdown, search table
+        └── AdminView.jsx      # Admin table with status update and delete actions
 ```
-
-> **Tip:** You can either update `spring.datasource.password` directly in the file or set an environment variable before running:
-> ```powershell
-> $env:SPRING_DATASOURCE_PASSWORD="your_actual_password"
-> ```
 
 ---
 
-## 🚀 Running the Application
+## ☁️ Deploying to Render
 
-### Option 1: Run with Maven Plugin (Recommended during development)
-Run the following command from the project root (`c:\Users\DELL\Documents\SCSMS`):
+The repository includes a ready-to-use Render Blueprint ([render.yaml](file:///c:/Users/DELL/Documents/SCSMS/render.yaml)) defining all 3 required components:
+
+### 1. Spring Boot Web Service (`scsms-backend`)
+- **Type**: Web Service
+- **Environment**: `Java` (or `Docker` using included `Dockerfile`)
+- **Build Command**: `mvn clean package -DskipTests`
+- **Start Command**: `java -jar target/scsms-1.0.0.jar`
+- **Health Check Path**: `/api/health`
+- **Environment Variables**:
+  | Key | Value | Description |
+  |---|---|---|
+  | `DATABASE_URL` | From `scsms-postgres.connectionString` | Cloud PostgreSQL URI |
+  | `APP_ADMIN_EMAIL` | `admin@campus.edu` | Initial admin account email |
+  | `APP_ADMIN_PASSWORD` | *(Generated automatically)* | Initial admin account password |
+  | `APP_CORS_ALLOWED_ORIGINS` | `https://scsms-frontend.onrender.com,http://localhost:5173` | Explicit allowed frontend origins |
+  | `SESSION_COOKIE_SAME_SITE` | `None` | Cross-site cookie support |
+  | `SESSION_COOKIE_SECURE` | `true` | Secure HTTPS cookie flag |
+
+### 2. React Vite Static Site (`scsms-frontend`)
+- **Type**: Static Site
+- **Build Command**: `cd frontend && npm install && npm run build`
+- **Publish Directory**: `frontend/dist`
+- **Routes / SPA Rewrite**:
+  - Type: `rewrite`
+  - Source: `/*`
+  - Destination: `/index.html`
+- **Environment Variables**:
+  | Key | Value | Description |
+  |---|---|---|
+  | `VITE_API_BASE_URL` | `https://scsms-backend.onrender.com` | Target backend REST URL |
+
+### 3. Managed PostgreSQL Database (`scsms-postgres`)
+- **Database Name**: `scsms_db`
+- **User**: `scsms_user`
+- **Plan**: `free`
+
+---
+
+## 🚀 Running Locally
+
+### Step 1: Run the Backend (Spring Boot)
+Option A: With local PostgreSQL (ensure database `smart_campus_db` exists):
 ```powershell
+$env:SPRING_DATASOURCE_USERNAME="postgres"
+$env:SPRING_DATASOURCE_PASSWORD="your_postgres_password"
 mvn spring-boot:run
 ```
-To supply your MySQL credentials directly in the command:
+
+Option B: Standalone Demo Mode (H2 in PostgreSQL mode, no DB server required):
 ```powershell
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.datasource.username=root --spring.datasource.password=your_password"
+mvn spring-boot:run -Dspring-boot.run.profiles=h2
+```
+or run with packaged JAR:
+```powershell
+java -jar target/scsms-1.0.0.jar --spring.profiles.active=h2
 ```
 
-### Option 2: Build and Run the Packaged JAR
-1. Build the executable JAR:
+### Step 2: Run the React Frontend (Vite)
+Open a separate terminal:
 ```powershell
-mvn clean package
+cd frontend
+npm install
+npm run dev
 ```
-2. Run the JAR:
-```powershell
-java -jar target/scsms-1.0.0.jar --spring.datasource.username=root --spring.datasource.password=your_password
-```
+Open **http://localhost:5173** in your browser. Vite automatically proxies `/api` calls to `http://localhost:8080`.
 
-### Option 3: Run with H2 In-Memory Database (No MySQL required)
-If you want to test the application instantly without connecting to MySQL:
+### Step 3: Production Build
 ```powershell
-mvn spring-boot:run -Dspring-boot.run.profiles=test
-```
+# Build React frontend
+cd frontend
+npm run build
 
-### 4. Access the Application
-Open your browser and navigate to:
-```
-http://localhost:8080
+# Build Spring Boot deployable JAR
+cd ..
+mvn package -DskipTests
 ```
 
 ---
 
-## 📡 REST API Reference
+## 🧪 Verification & Automated Tests
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/requests` | Submit a new service request |
-| `GET` | `/api/requests` | Retrieve all requests (supports `status`, `category`, `search`) |
-| `GET` | `/api/requests/{id}` | Get request details by database ID |
-| `GET` | `/api/requests/track/{requestId}` | Track request by unique tracking ID |
-| `PUT` | `/api/requests/{id}/status` | Update request status and admin notes |
-| `DELETE` | `/api/requests/{id}` | Permanently delete a service request |
-| `GET` | `/api/requests/stats` | Retrieve dashboard counters and category stats |
-| `GET` | `/api/dashboard/stats` | Alias endpoint for dashboard analytics |
-
-### Sample Payload: Submit Request (`POST /api/requests`)
-```json
-{
-  "studentName": "Alex Morgan",
-  "studentId": "STU-2024-1049",
-  "department": "Computer Science & Engineering",
-  "serviceCategory": "Wi-Fi",
-  "location": "Engineering Block B, Lab 302",
-  "priority": "HIGH",
-  "description": "Wi-Fi access point in Lab 302 drops connection every 5 minutes during lab sessions."
-}
-```
-
-### Sample Response (`201 Created`)
-```json
-{
-  "success": true,
-  "message": "Service request submitted successfully with ID: REQ-20261011-8421",
-  "data": {
-    "id": 1,
-    "requestId": "REQ-20261011-8421",
-    "studentName": "Alex Morgan",
-    "studentId": "STU-2024-1049",
-    "department": "Computer Science & Engineering",
-    "serviceCategory": "WIFI",
-    "categoryDisplayName": "Wi-Fi",
-    "description": "Wi-Fi access point in Lab 302 drops connection every 5 minutes during lab sessions.",
-    "priority": "HIGH",
-    "priorityDisplayName": "High",
-    "status": "PENDING",
-    "statusDisplayName": "Pending",
-    "location": "Engineering Block B, Lab 302",
-    "adminNotes": null,
-    "createdAt": "2026-10-11T14:40:00",
-    "updatedAt": "2026-10-11T14:40:00"
-  },
-  "timestamp": "2026-10-11T14:40:00.123"
-}
-```
-
----
-
-## 🧪 Running Automated Tests
-
-Run the full suite of unit and integration tests using:
+Run the full backend test suite:
 ```powershell
-mvn test
+mvn clean test
 ```
-The test suite validates:
-- Spring Boot Application Context initialization
-- Service layer business logic & automatic tracking ID generation
-- Status update workflow & timestamp handling
-- Deletion verification
-- Centralized exception mapping
-- REST Controller MockMvc endpoints & validation constraints
+
+### Verified Test Results:
+- **`AuthSecurityTest`**: 9 tests passed (Registration, duplicate checking, BCrypt password hashing, session login/logout, 401 unauthorized protection, 403 student forbidden checks on admin status updates and deletions, admin status updates and deletions, health check).
+- **`ServiceRequestControllerTest`**: 4 tests passed (REST controller endpoints, validation error constraints, dashboard statistics).
+- **`ServiceRequestServiceTest`**: 7 tests passed (Core business logic, unique ID generation, student scoping, category filters, and status stepper transitions).
+- **`ScsmsApplicationTests`**: 1 test passed (Spring Boot context bootstrap).
+
+**Total**: 21/21 tests passed (0 failures, 0 errors).
+**React Production Build**: `npm run build` compiled 47 modules into `frontend/dist` in 2.78s without errors.

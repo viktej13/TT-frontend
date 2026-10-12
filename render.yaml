@@ -1,0 +1,47 @@
+services:
+  # 1. Spring Boot Backend Web Service
+  - type: web
+    name: scsms-backend
+    env: java
+    plan: free
+    buildCommand: mvn clean package -DskipTests
+    startCommand: java -jar target/scsms-1.0.0.jar
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: scsms-postgres
+          property: connectionString
+      - key: APP_ADMIN_EMAIL
+        value: admin@campus.edu
+      - key: APP_ADMIN_PASSWORD
+        generateValue: true
+      - key: APP_CORS_ALLOWED_ORIGINS
+        value: https://scsms-frontend.onrender.com,http://localhost:5173
+      - key: SESSION_COOKIE_SAME_SITE
+        value: None
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+
+  # 2. React Vite Frontend Static Site
+  - type: static
+    name: scsms-frontend
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    publishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://scsms-backend.onrender.com
+
+databases:
+  # 3. Managed PostgreSQL Database
+  - name: scsms-postgres
+    plan: free
+    databaseName: scsms_db
+    user: scsms_user

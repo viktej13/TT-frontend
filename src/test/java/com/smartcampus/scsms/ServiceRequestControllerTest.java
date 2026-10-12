@@ -10,6 +10,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -25,6 +27,7 @@ class ServiceRequestControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
+    @WithMockUser(username = "jane@campus.edu", roles = "STUDENT")
     void testCreateRequest_Api() throws Exception {
         ServiceRequestCreateDto dto = new ServiceRequestCreateDto(
                 "Jane Doe",
@@ -37,6 +40,7 @@ class ServiceRequestControllerTest {
         );
 
         mockMvc.perform(post("/api/requests")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
@@ -47,11 +51,13 @@ class ServiceRequestControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "jane@campus.edu", roles = "STUDENT")
     void testCreateRequest_ValidationFailure() throws Exception {
         ServiceRequestCreateDto invalidDto = new ServiceRequestCreateDto();
         // All fields blank
 
         mockMvc.perform(post("/api/requests")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest())
@@ -60,6 +66,7 @@ class ServiceRequestControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "jane@campus.edu", roles = "STUDENT")
     void testGetDashboardStats_Api() throws Exception {
         mockMvc.perform(get("/api/requests/stats"))
                 .andExpect(status().isOk())
@@ -69,6 +76,7 @@ class ServiceRequestControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "jane@campus.edu", roles = "STUDENT")
     void testTrackRequest_NotFound() throws Exception {
         mockMvc.perform(get("/api/requests/track/REQ-NONEXISTENT"))
                 .andExpect(status().isNotFound())
